@@ -1,1 +1,1 @@
-# sp6-2_smart-table_starter
+https://github.com/Alyona-Roshch/smart-table.git

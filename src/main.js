@@ -1,54 +1,89 @@
-import './fonts/ys-display/fonts.css'
-import './style.css'
+import "./fonts/ys-display/fonts.css";
+import "./style.css";
 
-import {data as sourceData} from "./data/dataset_1.js";
+import { data as sourceData } from "./data/dataset_1.js";
+import { initData } from "./data.js";
+import { processFormData } from "./lib/utils.js";
+import { initTable } from "./components/table.js";
+import { initPagination } from "./components/pagination.js";
+import { initSorting } from "./components/sorting.js";
+import { initFiltering } from "./components/filtering.js";
+import { initSearching } from "./components/searching.js";
 
-import {initData} from "./data.js";
-import {processFormData} from "./lib/utils.js";
+const { data, ...indexes } = initData(sourceData);
 
-import {initTable} from "./components/table.js";
-// @todo: подключение
+// Подключаем header и filter через before: ['header', 'filter']
+const sampleTable = initTable(
+  {
+    tableTemplate: "table",
+    rowTemplate: "row",
+    before: ["search", "header", "filter"], // search стоит первым в before
+    after: ["pagination"],
+  },
+  render,
+);
 
+// Инициализируем поиск: передаём имя поля (должно совпадать с name="search" в шаблоне)
+const applySearching = initSearching("search");
 
-// Исходные данные используемые в render()
-const {data, ...indexes} = initData(sourceData);
+// Инициализация фильтрации
+const applyFiltering = initFiltering(sampleTable.filter.elements, {
+  searchBySeller: indexes.sellers,
+});
 
-/**
- * Сбор и обработка полей из таблицы
- * @returns {Object}
- */
+// Инициализация сортировки
+const applySorting = initSorting([
+  sampleTable.header.elements.sortByDate,
+  sampleTable.header.elements.sortByTotal,
+]);
+
+// Инициализация пагинации
+const applyPagination = initPagination(
+  sampleTable.pagination.elements,
+  (el, page, isCurrent) => {
+    const input = el.querySelector("input");
+    const label = el.querySelector("span");
+    if (input) {
+      input.value = page;
+      input.checked = isCurrent;
+    }
+    if (label) {
+      label.textContent = page;
+    }
+    return el;
+  },
+);
+
 function collectState() {
-    const state = processFormData(new FormData(sampleTable.container));
+  const state = processFormData(new FormData(sampleTable.container));
 
-    return {
-        ...state
-    };
+  const rowsPerPage = parseInt(state.rowsPerPage, 10);
+  const page = parseInt(state.page ?? 1, 10);
+
+  return {
+    ...state,
+    rowsPerPage,
+    page,
+  };
 }
 
-/**
- * Перерисовка состояния таблицы при любых изменениях
- * @param {HTMLButtonElement?} action
- */
 function render(action) {
-    let state = collectState(); // состояние полей из таблицы
-    let result = [...data]; // копируем для последующего изменения
-    // @todo: использование
+  let state = collectState();
+  let result = [...data];
 
+  result = applySearching(result, state, action);
+  result = applyFiltering(result, state, action);
+  result = applySorting(result, state, action);
+  result = applyPagination(result, state, action);
 
-    sampleTable.render(result)
+  sampleTable.render(result);
 }
 
-const sampleTable = initTable({
-    tableTemplate: 'table',
-    rowTemplate: 'row',
-    before: [],
-    after: []
-}, render);
-
-// @todo: инициализация
-
-
-const appRoot = document.querySelector('#app');
-appRoot.appendChild(sampleTable.container);
+const appRoot = document.querySelector("#app");
+if (appRoot) {
+  appRoot.appendChild(sampleTable.container);
+} else {
+  console.error("#app не найден в DOM");
+}
 
 render();
