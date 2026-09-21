@@ -17,9 +17,12 @@ export function initFiltering(elements) {
       const parent = action.parentElement;
       if (parent) {
         const fieldName = action.dataset.field;
-        const input = parent.querySelector(`input[data-field="${fieldName}"]`);
-        if (input) {
-          input.value = "";
+        const field = parent.querySelector("input, select");
+        if (field) {
+          field.value = "";
+        }
+        if (fieldName) {
+          state[fieldName] = "";
         }
       }
     }
